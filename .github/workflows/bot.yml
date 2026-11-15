@@ -1,0 +1,40 @@
+# 1. このロボット作業のタイトル（自由な英語でOK）
+name: Daily Weather Bot
+
+# 2. いつこの作業をスタートするか（トリガー）
+on:
+  workflow_dispatch:  # 手動テスト用の「実行ボタン」を画面に出す設定
+  
+  schedule:
+    # 日本時間の毎朝7:00に動かす場合（世界標準時 UTC なのでマイナス9時間する）
+    - cron: '0 22 * * *'
+
+
+# 3. ロボットにやらせる仕事の内容
+jobs:
+  run-bot:
+    # どんなパソコン（サーバー）を用意するか（最新のLinuxパソコンを指定）
+    runs-on: ubuntu-latest
+
+    # 上から順番に実行する作業リスト
+    steps:
+      # 作業①：あなたのGitHub保管箱からコードをダウンロードする
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 作業②：パソコンの中にPythonを用意する
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # 作業③：requirements.txt を見て必要な部品をインストールする
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      # 作業④：金庫（Secrets）から鍵を取り出し、ボットを実行する
+      - name: Run weather bot
+        env:
+          WEATHER_API_KEY: ${{ secrets.WEATHER_API_KEY }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: python bot.py
