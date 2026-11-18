@@ -1,6 +1,12 @@
 import sqlite3
 import datetime
 from dotenv import load_dotenv
+import os
+import libsql_client
+
+load_dotenv()
+db_url = os.getenv("TURSO_DATABASE_URL")
+db_token = os.getenv("TURSO_AUTH_TOKEN")
 
 
 class Task:
@@ -13,44 +19,45 @@ class Task:
 
 class TaskRepository:
      def __init__(self,db_name):
-         self.conn = sqlite3.connect(db_name,check_same_thread=False)
-         self.cursor = self.conn.cursor()
+     #     self.conn = sqlite3.connect(db_name,check_same_thread=False)
+     #     self.client = self.conn.client()
+          self.client = libsql_client.create_client_sync(
+          url=db_url,
+          auth_token=db_token
+          )
 
-         self.cursor.execute ("""
-            CREATE TABLE IF NOT EXISTS task_table(
-                id integer primary key autoincrement,
-                name text,
-                state text,
-                deadline text
-             )
-         """)
+          self.client.execute ("""
+               CREATE TABLE IF NOT EXISTS task_table(
+                    id integer primary key autoincrement,
+                    name text,
+                    state text,
+                    deadline text
+               )
+          """)
          #print("動作確認")
      def close(self):
-          self.conn.close()
+          self.client.close()
 
      def add(self,task):
          sql='insert into task_table (name,state,deadline) values(?,?,?)'
-         self.cursor.execute(sql,(task.name,task.state,task.deadline))
-         self.conn.commit()
+         result=self.client.execute(sql,[task.name,task.state,task.deadline])
 
-         new_task_id=self.cursor.lastrowid
-         return new_task_id  
+         return result.last_insert_rowid 
 
      def get_all(self):       
             
-         self.cursor.execute('select*from task_table')
-         return self._rows_to_tasks()
+         result=self.client.execute('select*from task_table')
+         return self._fetch_tasks(result.rows)
          
 
      def delete(self,delete_num):
           sql='delete from task_table where id=?'
-          self.cursor.execute(sql,(delete_num,))
-          self.conn.commit()
-          return self.cursor.rowcount
+          result=self.client.execute(sql,[delete_num,])
+          return result.rows_affected
 
      def get_incomplete(self):        
-          self.cursor.execute('select* from task_table where state="未完了"')
-          return self._rows_to_tasks()
+          
+          return self._fetch_tasks(('select* from task_table where state="未完了"'))
 
      def get_overdue(self):
                  
@@ -58,11 +65,11 @@ class TaskRepository:
                     where deadline!=''
                     and deadline<date('now','localtime')
                     """)
-          self.cursor.execute(sql)
-          return self._rows_to_tasks()
+          self.client.execute(sql)
+          return self._fetch_tasks(sql)
 
-     def _rows_to_tasks(self):
-           task_line = self.cursor.fetchall()
+     def _rows_to_tasks(self,task_line):
+           
            task_list=[]
            for line in task_line:
                     task_id,task_name,task_state,task_deadline=line
@@ -70,11 +77,14 @@ class TaskRepository:
                     task_list.append(task)
            return task_list
 
+     def _fetch_tasks(self,sql,params=None):
+          result=self.client.execute(sql,params or [])
+          return self._rows_to_tasks(result.rows)
+
      def get_by_id(self,task_id):
            sql =('select*from task_table where id =?')
-           self.cursor.execute(sql,(task_id,)) 
-           
-           task=self._rows_to_tasks()
+        
+           task=self._fetch_tasks(sql,[task_id])
 
            if task:
                return task[0]
@@ -91,8 +101,8 @@ class TaskRepository:
                set name=?,state=?,deadline=?
                where id =?''')
 
-          self.cursor.execute(sql,(task_name,task_state,task_deadline,task_id))
-          self.conn.commit()
+          self.client.execute(sql,[task_name,task_state,task_deadline,task_id])
+          
 
      def _check_date(self,task_deadline):
           task_deadline_date=task_deadline
@@ -108,8 +118,8 @@ class TaskRepository:
                     and deadline<date('now','localtime')
                     and state='未完了'
                ''')                  
-          self.cursor.execute(sql)
-          return self._rows_to_tasks()
+          
+          return self._fetch_tasks(sql)
      
      def get_due_today_incomplete(self,utc_day):
           sql=('''select *from task_table
@@ -117,9 +127,9 @@ class TaskRepository:
                     and deadline=?
                     and state='未完了'
                ''')                  
-          self.cursor.execute(sql,(utc_day,))
-          return self._rows_to_tasks()
-               
+          
+          return self._fetch_tasks(sql,(utc_day,))
+
 
 
 

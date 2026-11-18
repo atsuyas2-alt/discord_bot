@@ -38,4 +38,6 @@ jobs:
           WEATHER_API_KEY: ${{ secrets.WEATHER_API_KEY }}
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           DB_NAME: ${{ secrets.DB_NAME }}
+          TURSO_DATABASE_URL: ${{ secrets.TURSO_DATABASE_URL }}  
+          TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
         run: python bot.py

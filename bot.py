@@ -10,6 +10,8 @@ load_dotenv()
 api_key=os.getenv('WEATHER_API_KEY')
 url=os.getenv('DISCORD_WEBHOOK_URL')
 todo_db=os.getenv('DB_NAME')
+db_url = os.getenv("TURSO_DATABASE_URL")
+db_token = os.getenv("TURSO_AUTH_TOKEN")
 
 logging.basicConfig(
     level=logging.INFO,
@@ -46,7 +48,7 @@ def send_to_discord(city_name_variable,temp_variable,temp_feel_variable,humidity
 
             post_response=requests.post(url,json=payload)
             if post_response.status_code==204:
-                logging.info('success')
+                logging.info('wether success')
                 break
                 
             else:
@@ -99,8 +101,8 @@ else:
 
 #todo integration
 jst=timezone(timedelta(hours=9))
-today=datetime.now(jst.utc).strftime('%Y-%m-%d')
-repo=TaskRepository(todo_db)
+today=datetime.now(jst).strftime('%Y-%m-%d')
+repo=TaskRepository(db_url)
 
 task_today_incomplete=repo.get_due_today_incomplete(today)
 
@@ -121,21 +123,21 @@ for i in range(3):
             #discordに送るデータ
                 embed_data={
                     'title':'今日締め切りのtodoリスト',
-                    'fields':[field_list],
+                    'fields':field_list,
                     }
 
             else:
                 embed_data={
                 'title':'今日締め切りのtodoリスト',
                 'fields':[
-                     {'name':'','value':'今日締め切りのタスクはありません','inline':True}
+                     {'name':'todoお知らせ','value':'今日締め切りのタスクはありません','inline':True}
                 ],
                 }
             payload={'embeds':[embed_data]}
 
             post_response=requests.post(url,json=payload)
             if post_response.status_code==204:
-                logging.info('success')
+                logging.info('todo success')
                 break
                 
             else:
