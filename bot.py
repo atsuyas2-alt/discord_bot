@@ -5,6 +5,7 @@ import logging
 import time
 from todo_db_class import Task,TaskRepository
 from datetime import datetime,timezone,timedelta
+import sys
 
 load_dotenv()
 api_key=os.getenv('WEATHER_API_KEY')
@@ -60,6 +61,7 @@ def send_to_discord(city_name_variable,temp_variable,temp_feel_variable,humidity
             time.sleep(3)
     else:
         logging.warning('discord send 3times failuer')
+        
 
 
 city_name=os.getenv("CITY_NAME", "Kanazawa")
@@ -97,6 +99,8 @@ for i in range(3):
 
 else:
     logging.warning('api get 3times failuer')
+    sys.exit(1)
+
 
 
 #todo integration
